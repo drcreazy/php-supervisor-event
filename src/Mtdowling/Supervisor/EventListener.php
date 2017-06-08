@@ -2,6 +2,8 @@
 
 namespace Mtdowling\Supervisor;
 
+use Closure;
+
 /**
  * Handles communication between Supervisord events and an event callback
  *
@@ -13,6 +15,8 @@ class EventListener
     const READY = 'READY';
     const BUSY = 'BUSY';
     const QUIT = 'quit';
+
+    private $memoryLimit = 128;
 
     /**
      * @var resource Input stream used to retrieve text
@@ -96,6 +100,10 @@ class EventListener
 
         while (true) {
             if (!$input = trim($this->readLine())) {
+                if ((memory_get_usage() / 1024 / 1024) >= $this->memoryLimit) {
+                    break;
+                }
+
                 continue;
             }
             $headers = EventNotification::parseData($input);
@@ -171,5 +179,15 @@ class EventListener
     public function sendReady()
     {
         fwrite($this->outputStream, self::READY . "\n");
+    }
+
+    /**
+     * @param $memoryLimit
+     * @return $this
+     */
+    public function setMemoryLimit($memoryLimit)
+    {
+        $this->memoryLimit = intval($memoryLimit);
+        return $this;
     }
 }
